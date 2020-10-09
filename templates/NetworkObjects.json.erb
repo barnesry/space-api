@@ -1,0 +1,11 @@
+{
+  "NETWORK_OBJECTS": {
+<% addresses.each do | address | %>
+    "<%= address.name %>": {
+      "ADDRESS_TYPE": "<%= address.address_type %>",
+      "IP_ADDRESS": "<%= address.ip_address %>",
+      "DESCRIPTION": "<%= address.description %>"
+    },
+<% end %>
+  }
+}

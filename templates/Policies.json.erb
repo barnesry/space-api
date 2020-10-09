@@ -1,0 +1,10 @@
+{
+  "POLICIES": {
+<% for policy in policies %>
+    "<%= policy.name %>": {
+        "SOURCE_ZONE": "<%= policy.from_zone %>",
+        "DESTINATION_ZONE": "<%= policy.to_zone %>",
+    }
+<% end %>
+  }
+}

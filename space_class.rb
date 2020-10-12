@@ -356,5 +356,43 @@ end
 
 class Service
     ''' Represents attributes of a service object '''
+    attr_accessor :name, :protocols, :description, :definition_type, :members
+    
+    def initialize(name)
+        @name = name
+        @protocols = Array.new
+        @members = Array.new
+    end
 
+    def add_protocol(protocol)
+        @protocols.push(protocol)
+    end
+
+    def add_member(service)
+        @members.push(service)
+    end
+
+end
+
+class Protocol
+    ''' Represents attributes of a protocol definition '''
+    attr_accessor :name, :dst_port, :description, :protocol_number, :icmp_code, :icmp_type
+
+    def initialize(name)
+        @name = name
+    end
+
+    @@protocols = { 1 => 'ICMP' ,
+                    6 => 'TCP',
+                    17 => 'UDP',
+                    41 => 'IPv6',
+                    47 => 'GRE',
+                    50 => 'ESP',
+                    58 => 'IPv6 ICMP',
+                    88 => 'EIGRP'
+                }
+
+    def get_protocol_type
+        @@protocols[self.protocol_number]
+    end
 end

@@ -33,6 +33,15 @@ require_relative 'space_class.rb'
 
 verbose = false
 
+PROTOCOLS = { 1 => 'ICMP' ,
+                6 => 'TCP',
+                17 => 'UDP',
+                41 => 'IPv6',
+                47 => 'GRE',
+                50 => 'ESP',
+                58 => 'IPv6 ICMP',
+                88 => 'EIGRP'
+            }
 
 #############
 # FUNCTIONS #
@@ -60,7 +69,9 @@ def build_auth_header(username, password)
     userpassenc = "Basic " + Base64.encode64(userpass)
 
     # need to return a string that looks like the following w/o CR/LF
-    # "Basic amNsdXNlcjpKdW5pcGVyITE="
+    # "Basic amN234NlcjpKfdcGVyITE="
+
+
     return userpassenc.chomp
 end
 
@@ -138,6 +149,10 @@ def get_address_name(detailed_addresses)
 end
 
 
+def get_protocol_type(protocol_number)
+    ''' returns the protocol name for respective protocol number '''
+    PROTOCOLS[protocol_number]
+end
 
 
 
@@ -287,7 +302,105 @@ puts
 puts
 
 
-pp(s.get_service_details())
+# retrieve service detail output for all services
+service_details = s.get_service_details()
+services = Array.new
+
+# build our service base objects
+service_details["output"]["value"].each do | service |
+    
+    # parse all our base services and protocols
+    if service["is-group"] == false
+        service_obj = Service.new(name = service["name"])
+        service_obj.description = service["description"]
+        service_obj.definition_type = service["definition_type"]
+        
+        service["protocols"]["protocol"].each do | protocol |
+            #pp(protocol)
+            protocol_obj = (Protocol.new(name = protocol["name"]))
+            protocol_obj.protocol_number = protocol["protocol-number"]
+            protocol_obj.icmp_code = protocol["icmp-code"]
+            protocol_obj.icmp_type = protocol["icmp-type"]
+            protocol_obj.dst_port = protocol["dst-port"] if !protocol["dst-port"].nil?         
+
+            # add the protocol object to our service
+            service_obj.add_protocol(protocol_obj)
+        end
+
+        # add the service to our service list
+        services.push(service_obj) if !service_obj.nil?
+
+
+        if service_obj.nil?
+            puts "ERROR PARSING : "
+            pp(service)
+        end
+
+    end
+end
+
+
+# build our service groups
+service_details["output"]["value"].each do | service |
+    # now we can build our groups from those base services
+    if service["is-group"] == true
+        service_obj = Service.new(name = service["name"])
+        service_obj.description = service["description"]
+        service_obj.definition_type = service["definition_type"]
+        service["service_refs"].each do | member |
+            begin
+                # lookup previously built protocols and add each respective protocol to our service object as members
+                s = services.find { |svc| svc.name == member["name"] }
+                service_obj.add_member(s)
+
+                # dump members to screen
+                # puts "#{service_obj.name} : #{s.name}"
+            rescue
+                puts "SERVICE NOT FOUND : " + member["name"]
+                pp(service)
+            end
+        end
+
+        # add the service to our service list
+        services.push(service_obj) if !service_obj.nil?
+
+        if service_obj.nil?
+            puts "ERROR PARSING : "
+            pp(service)
+        end
+    end
+end
+
+
+# gather only services
+services_only = services.select { |service| service.members.empty? }
+
+
+# output our template
+template = ERB.new(File.read('templates/ServiceObjects.json.erb'), 0, trim_mode = '<>')
+puts template.result_with_hash(services_only: services_only)
+
+puts
+puts
+puts "---------------------------"
+puts
+puts
+
+
+# gather only service groups
+service_groups = services.select { |service| !service.members.empty? }
+
+# output our template
+template = ERB.new(File.read('templates/ServiceGroups.json.erb'), 0, trim_mode = '<>')
+puts template.result_with_hash(service_groups: service_groups)
+
+
+puts
+puts
+puts "---------------------------"
+puts
+puts
+
 
 
 # devices.each do | device |
